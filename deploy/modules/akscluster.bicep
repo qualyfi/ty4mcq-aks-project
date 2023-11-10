@@ -7,20 +7,25 @@ resource resVnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
   properties: {
     addressSpace: {
       addressPrefixes: [
-        '10.0.0.0/16'
+        '10.0.0.0/12'
       ]
     }
     subnets: [
       {
         name: 'aksCluster'
         properties: {
-          addressPrefix: '10.0.0.0/24'
+          addressPrefix: '10.1.0.0/16'
+        }
+      }
+      {
+        name: 'appGw'
+        properties: {
+          addressPrefix: '10.2.0.0/16'
         }
       }
     ]
   }
 }
-
 
 resource resAksCluster 'Microsoft.ContainerService/managedClusters@2023-09-01' = {
   name: 'aks-${parInitials}-akscluster-001'
@@ -58,7 +63,6 @@ resource resAksCluster 'Microsoft.ContainerService/managedClusters@2023-09-01' =
         osSKU: 'CBLMariner'
         mode: 'System'
         vnetSubnetID: resVnet.properties.subnets[0].id
-
       }
     ]
   }
