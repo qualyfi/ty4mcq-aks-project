@@ -15,6 +15,9 @@ resource resVnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
         name: 'aksCluster'
         properties: {
           addressPrefix: '10.1.0.0/16'
+          natGateway: {
+            id: resNatGw.id
+          }
         }
       }
       {
@@ -63,6 +66,32 @@ resource resAksCluster 'Microsoft.ContainerService/managedClusters@2023-09-01' =
         osSKU: 'CBLMariner'
         mode: 'System'
         vnetSubnetID: resVnet.properties.subnets[0].id
+      }
+    ]
+  }
+}
+
+resource resNatGwPublicIP 'Microsoft.Network/publicIPAddresses@2023-05-01' = {
+  name: 'aks-${parInitials}-natgw-pip'
+  location: parLocation
+  sku: {
+    name: 'Standard'
+  }
+  properties: {
+    publicIPAllocationMethod: 'Static'
+  }
+}
+
+resource resNatGw 'Microsoft.Network/natGateways@2023-05-01' = {
+  name: 'aks-${parInitials}-natgw'
+  location: parLocation
+  sku: {
+    name: 'Standard'
+  }
+  properties: {
+    publicIpAddresses: [
+      {
+        id: resNatGwPublicIP.id
       }
     ]
   }
