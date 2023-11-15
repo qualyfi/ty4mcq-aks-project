@@ -28,6 +28,12 @@ resource resVnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
           addressPrefix: '10.2.0.0/16'
         }
       }
+      {
+        name: 'AzureBastionSubnet'
+        properties: {
+          addressPrefix: '10.3.0.0/26'
+        }
+      }
     ]
   }
 }
@@ -102,6 +108,39 @@ resource resNatGw 'Microsoft.Network/natGateways@2023-05-01' = {
     publicIpAddresses: [
       {
         id: resNatGwPublicIP.id
+      }
+    ]
+  }
+}
+resource resBasPublicIP 'Microsoft.Network/publicIPAddresses@2023-05-01' = {
+  name: 'aks-${parInitials}-baspip'
+  location: parLocation
+  sku: {
+    name: 'Standard'
+  }
+  properties: {
+    publicIPAllocationMethod: 'Static'
+  }
+}
+resource resBas 'Microsoft.Network/bastionHosts@2023-05-01' = {
+  name: 'aks-${parInitials}-bas'
+  location: parLocation
+  sku: {
+    name: 'Standard'
+  }
+  properties: {
+    ipConfigurations: [
+      {
+        name: 'ipConfig'
+        properties: {
+          privateIPAllocationMethod:'Dynamic'
+          publicIPAddress: {
+            id: resBasPublicIP.id
+          }
+          subnet: {
+            id: resVnet.properties.subnets[2].id
+          }
+        }
       }
     ]
   }
