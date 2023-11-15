@@ -1,5 +1,7 @@
 param parLocation string
 param parInitials string
+param parTenantId string
+param parEntraGroupId string
 
 resource resVnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
   name: 'aks-${parInitials}-vnet'
@@ -62,12 +64,20 @@ resource resAksCluster 'Microsoft.ContainerService/managedClusters@2023-09-01' =
         maxCount: 20
         minCount: 1
         enableAutoScaling: true
-        osType: 'User'
+        osType: 'Linux'
         osSKU: 'CBLMariner'
         mode: 'System'
         vnetSubnetID: resVnet.properties.subnets[0].id
       }
     ]
+    aadProfile: {
+      managed: true
+      adminGroupObjectIDs: [
+        parEntraGroupId
+      ]
+      tenantID: parTenantId
+    }
+    disableLocalAccounts: true
   }
 }
 
