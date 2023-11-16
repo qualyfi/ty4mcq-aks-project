@@ -2,6 +2,7 @@ param parLocation string
 param parInitials string
 param parTenantId string
 param parEntraGroupId string
+param parAppgwName string
 
 resource resVnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
   name: 'aks-${parInitials}-vnet'
@@ -84,6 +85,14 @@ resource resAksCluster 'Microsoft.ContainerService/managedClusters@2023-09-01' =
       tenantID: parTenantId
     }
     disableLocalAccounts: true
+    addonProfiles: {
+      ingressApplicationGateway: {
+        enabled: true
+        config: {
+          applicationGatewayId: resAppgw.id
+        }
+      }
+    }
   }
 }
 
@@ -97,7 +106,6 @@ resource resNatGwPublicIP 'Microsoft.Network/publicIPAddresses@2023-05-01' = {
     publicIPAllocationMethod: 'Static'
   }
 }
-
 resource resNatGw 'Microsoft.Network/natGateways@2023-05-01' = {
   name: 'aks-${parInitials}-natgw'
   location: parLocation
@@ -112,8 +120,48 @@ resource resNatGw 'Microsoft.Network/natGateways@2023-05-01' = {
     ]
   }
 }
-resource resBasPublicIP 'Microsoft.Network/publicIPAddresses@2023-05-01' = {
-  name: 'aks-${parInitials}-baspip'
+
+// resource resBasPublicIP 'Microsoft.Network/publicIPAddresses@2023-05-01' = {
+//   name: 'aks-${parInitials}-baspip'
+//   location: parLocation
+//   sku: {
+//     name: 'Standard'
+//   }
+//   properties: {
+//     publicIPAllocationMethod: 'Static'
+//   }
+// }
+// resource resBas 'Microsoft.Network/bastionHosts@2023-05-01' = {
+//   name: 'aks-${parInitials}-bas'
+//   location: parLocation
+//   sku: {
+//     name: 'Standard'
+//   }
+//   properties: {
+//     ipConfigurations: [
+//       {
+//         name: 'ipConfig'
+//         properties: {
+//           privateIPAllocationMethod:'Dynamic'
+//           publicIPAddress: {
+//             id: resBasPublicIP.id
+//           }
+//           subnet: {
+//             id: resVnet.properties.subnets[2].id
+//           }
+//         }
+//       }
+//     ]
+//   }
+// }
+
+resource resLaw 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
+  name: 'aks-${parInitials}-law'
+  location: parLocation
+}
+
+resource resAppgwPublicIP 'Microsoft.Network/publicIPAddresses@2023-05-01' = {
+  name: 'aks-${parInitials}-appgwpip'
   location: parLocation
   sku: {
     name: 'Standard'
@@ -122,26 +170,120 @@ resource resBasPublicIP 'Microsoft.Network/publicIPAddresses@2023-05-01' = {
     publicIPAllocationMethod: 'Static'
   }
 }
-resource resBas 'Microsoft.Network/bastionHosts@2023-05-01' = {
-  name: 'aks-${parInitials}-bas'
+
+resource resAppgw 'Microsoft.Network/applicationGateways@2023-05-01' = {
+  name: 'aks-${parInitials}-appgw'
   location: parLocation
-  sku: {
-    name: 'Standard'
-  }
   properties: {
-    ipConfigurations: [
+    sku: {
+      name: 'WAF_v2'
+      tier: 'WAF_v2'
+    }
+    gatewayIPConfigurations: [
       {
         name: 'ipConfig'
         properties: {
-          privateIPAllocationMethod:'Dynamic'
-          publicIPAddress: {
-            id: resBasPublicIP.id
-          }
           subnet: {
-            id: resVnet.properties.subnets[2].id
+            id: resVnet.properties.subnets[1].id
           }
         }
       }
     ]
+    frontendIPConfigurations: [
+      {
+        name: 'frontendPIP'
+        properties: {
+          publicIPAddress: {
+            id: resAppgwPublicIP.id
+          }
+        }
+      }
+    ]
+    frontendPorts: [
+      {
+        name: 'port_80'
+        properties: {
+          port: 80
+        }
+      }
+    ]
+    backendAddressPools: [
+      {
+        name: 'bepool-akscluster'
+      }
+    ]
+    backendHttpSettingsCollection: [
+      {
+        name: 'bepool-settings'
+        properties: {
+          port: 80
+          protocol: 'Http'
+          cookieBasedAffinity: 'Disabled'
+          pickHostNameFromBackendAddress: false
+        }
+      }
+    ]
+    httpListeners: [
+      {
+        name: 'http-listener'
+        properties: {
+          frontendIPConfiguration: {
+            id: resourceId('Microsoft.Network/applicationGateways/frontendIPConfigurations', parAppgwName, 'frontendPIP')
+          }
+          frontendPort: {
+            id: resourceId('Microsoft.Network/applicationGateways/frontendPorts', parAppgwName, 'port_80')
+          }
+          protocol: 'Http'
+        }
+      }
+    ]
+    requestRoutingRules: [
+      {
+        name: 'http-only'
+        properties: {
+          ruleType: 'Basic'
+          priority: 1000
+          httpListener: {
+            id: resourceId('Microsoft.Network/applicationGateways/httpListeners', parAppgwName, 'http-listener')
+          }
+          backendAddressPool: {
+            id: resourceId('Microsoft.Network/applicationGateways/backendAddressPools', parAppgwName, 'bepool-akscluster')
+          }
+          backendHttpSettings: {
+            id: resourceId('Microsoft.Network/applicationGateways/backendHttpSettingsCollection', parAppgwName, 'bepool-settings')
+          }
+        }
+      }
+    ]
+    firewallPolicy: {
+      id: resAppgwWaf.id
+    }
+    autoscaleConfiguration: {
+      minCapacity: 0
+      maxCapacity: 10
+    }
   }
 }
+
+resource resAppgwWaf 'Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies@2023-05-01' = {
+  name: 'appgwWaf'
+  location: parLocation
+  properties: {
+    policySettings: {
+      requestBodyCheck: true
+      maxRequestBodySizeInKb: 128
+      fileUploadLimitInMb: 100
+      state: 'Enabled'
+      mode: 'Detection'
+    }
+    managedRules: {
+      managedRuleSets: [
+        {
+          ruleSetType: 'OWASP'
+          ruleSetVersion: '3.2'
+        }
+      ]
+    }
+  }
+}
+

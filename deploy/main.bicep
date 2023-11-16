@@ -10,5 +10,6 @@ module modAksCluster 'modules/akscluster.bicep' = {
     parInitials: parInitials
     parTenantId: parTenantId
     parEntraGroupId: parEntraGroupId
+    parAppgwName: 'aks-${parInitials}-appgw'
   }
 }
