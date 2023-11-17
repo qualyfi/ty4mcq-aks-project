@@ -3,6 +3,9 @@ param parInitials string
 param parTenantId string
 param parEntraGroupId string
 param parAppgwName string
+param parAcrName string
+
+var varAcrPullRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
 
 resource resVnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
   name: 'aks-${parInitials}-vnet'
@@ -39,15 +42,25 @@ resource resVnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
   }
 }
 
+resource resAcr 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
+  name: parAcrName
+  location: parLocation
+  sku: {
+    name: 'Basic'
+  }
+  properties: {
+    adminUserEnabled: true
+  }
+}
 resource resAksCluster 'Microsoft.ContainerService/managedClusters@2023-09-01' = {
-  name: 'aks-${parInitials}-akscluster-001'
+  name: 'aks-${parInitials}-akscluster'
   location: parLocation
   identity: {
     type: 'SystemAssigned'
   }
   properties: {
     kubernetesVersion: '1.26.6'
-    dnsPrefix: 'aks-${parInitials}-akscluster-001-dns'
+    dnsPrefix: 'aks-${parInitials}-akscluster-dns'
     enableRBAC: true
     agentPoolProfiles: [
       {
@@ -92,9 +105,26 @@ resource resAksCluster 'Microsoft.ContainerService/managedClusters@2023-09-01' =
           applicationGatewayId: resAppgw.id
         }
       }
+      omsagent: {
+        enabled: true
+        config: {
+          logAnalyticsWorkspaceResourceID: resLaw.id
+        }
+      }
     }
   }
 }
+
+resource resAcrPullRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(resourceGroup().id, resAcr.id, varAcrPullRoleDefinitionId)
+  scope: resAcr
+  properties: {
+    principalId: resAksCluster.properties.identityProfile.kubeletidentity.objectId
+    roleDefinitionId: varAcrPullRoleDefinitionId
+    principalType: 'ServicePrincipal'
+  }
+}
+
 
 resource resNatGwPublicIP 'Microsoft.Network/publicIPAddresses@2023-05-01' = {
   name: 'aks-${parInitials}-natgw-pip'

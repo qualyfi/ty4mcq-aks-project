@@ -2,6 +2,7 @@ param parLocation string
 param parInitials string
 param parTenantId string
 param parEntraGroupId string
+param parAcrName string
 
 module modAksCluster 'modules/akscluster.bicep' = {
   name: 'aksCluster'
@@ -11,5 +12,6 @@ module modAksCluster 'modules/akscluster.bicep' = {
     parTenantId: parTenantId
     parEntraGroupId: parEntraGroupId
     parAppgwName: 'aks-${parInitials}-appgw'
+    parAcrName: parAcrName
   }
 }
