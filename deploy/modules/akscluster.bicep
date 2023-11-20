@@ -109,6 +109,7 @@ resource resAksCluster 'Microsoft.ContainerService/managedClusters@2023-09-01' =
         enabled: true
         config: {
           logAnalyticsWorkspaceResourceID: resLaw.id
+          useAADAuth: 'true'
         }
       }
     }
@@ -189,6 +190,56 @@ resource resLaw 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   name: 'aks-${parInitials}-law'
   location: parLocation
 }
+resource resAksCiDcr 'Microsoft.Insights/dataCollectionRules@2022-06-01' = {
+  name: 'aks-${parInitials}-ci-aksdcr'
+  location: parLocation
+  kind: 'Linux'
+  properties: {
+    dataSources: {
+      extensions: [
+        {
+          name: 'ContainerInsightsExtension'
+          streams: [
+            'Microsoft-ContainerInsights-Group-Default'
+          ]
+          extensionName: 'ContainerInsights'
+          extensionSettings: {}
+        }
+      ]
+    }
+    destinations: {
+      logAnalytics: [
+        {
+          workspaceResourceId: resLaw.id
+          name: 'ciworkspace'
+        }
+      ]
+    }
+    dataFlows: [
+      {
+        streams: [
+        'Microsoft-ContainerInsights-Group-Default'
+        ]
+        destinations: [
+          'ciworkspace'
+        ]
+      }
+    ]
+  }
+  dependsOn: [
+    resAksCluster
+  ]
+}
+resource resAksCiDcrA 'Microsoft.Insights/dataCollectionRuleAssociations@2022-06-01' = {
+  name: 'aksCiDcrA'
+  scope: resAksCluster
+  properties: {
+    dataCollectionRuleId: resAksCiDcr.id
+  }
+}
+
+
+
 
 resource resAppgwPublicIP 'Microsoft.Network/publicIPAddresses@2023-05-01' = {
   name: 'aks-${parInitials}-appgwpip'
