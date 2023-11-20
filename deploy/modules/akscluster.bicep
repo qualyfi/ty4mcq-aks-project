@@ -54,6 +54,12 @@ resource resAksCluster 'Microsoft.ContainerService/managedClusters@2023-09-01' =
     kubernetesVersion: '1.26.6'
     dnsPrefix: 'aks-${parInitials}-akscluster-dns'
     enableRBAC: true
+    networkProfile: {
+      networkPlugin: 'azure'
+      networkPolicy: 'azure'
+      networkDataplane: 'azure'
+      loadBalancerSku: 'standard'
+    }
     agentPoolProfiles: [
       {
         name: 'system'
