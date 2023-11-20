@@ -9,7 +9,7 @@ $clientInitials = 'tm'
 $tenantId = 'd4003661-f87e-4237-9a9b-8b9c31ba2467'
 $entraGroupId = 'c049d1ab-87d3-491b-9c93-8bea50fbfbc3'
 
-$rgName = '8azure-devops-track-aks-exercise-'+$($clientName)
+$rgName = '5azure-devops-track-aks-exercise-'+$($clientName)
 $rgLocation = 'uksouth'
 $acrName = 'aks'+$($clientInitials)+'acr'
 
