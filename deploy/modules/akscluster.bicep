@@ -6,6 +6,10 @@ param parAppgwName string
 param parAcrName string
 
 var varAcrPullRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
+var varMonitoringReaderRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '43d0d8ad-25c7-4714-9337-8ba259a9fe05')
+var varMonitoringDataReaderRoleId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b0d8363b-8ddd-447d-831f-62ca05bff136')
+// var varGrafanaAdminRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '22926164-76b3-42b3-bc55-97df8dab3e41')
+
 
 //Virtual Network
 resource resVnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
@@ -660,6 +664,25 @@ resource resGrafana 'Microsoft.Dashboard/grafana@2022-08-01' =  {
     zoneRedundancy: 'Disabled'
   }
 }
+resource monitoringReaderRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name:  guid(resourceGroup().id, resMspromMonitorWorkspace.name, varMonitoringReaderRoleDefinitionId)
+  scope: resMspromMonitorWorkspace
+  properties: {
+    roleDefinitionId: varMonitoringReaderRoleDefinitionId
+    principalId: resGrafana.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+resource resMonitoringDataReaderRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name:  guid(resourceGroup().id, resMspromMonitorWorkspace.id, varMonitoringDataReaderRoleId)
+  scope: resMspromMonitorWorkspace
+  properties: {
+    roleDefinitionId: varMonitoringDataReaderRoleId
+    principalId: resGrafana.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
 
 
 //Application Gateway + App GW PIP + App GW WAF
