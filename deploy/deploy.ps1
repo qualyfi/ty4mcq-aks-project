@@ -3,8 +3,8 @@ az login
 az account show
 az ad group list
 
-$clientName = 'ty4mcq'
-$clientInitials = 't4m'
+$clientName = 'ty4mcqueen'
+$clientInitials = 'tymc'
 
 $tenantId = 'd4003661-f87e-4237-9a9b-8b9c31ba2467'
 $entraGroupId = 'c049d1ab-87d3-491b-9c93-8bea50fbfbc3'
@@ -39,4 +39,3 @@ kubectl apply -f deploy/container-azm-ms-agentconfig.yaml
 
 kubectl apply -f azure-voting-app-redis/azure-vote-all-in-one-redis.yaml --namespace production
 kubectl get service azure-vote-front --namespace production --watch
-

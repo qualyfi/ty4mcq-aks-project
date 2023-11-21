@@ -24,33 +24,51 @@ resource resVnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
     }
     subnets: [
       {
-        name: 'AksClusterNodeSubnet'
-        properties: {
-          addressPrefix: '10.1.0.0/16'
-          natGateway: {
-            id: resNatGw.id
-          }
-        }
-      }
-      {
-        name: 'AksClusterPodSubnet'
-        properties: {
-          addressPrefix: '10.2.0.0/16'
-          natGateway: {
-            id: resNatGw.id
-          }
-        }
-      }
-      {
         name: 'AppGwSubnet'
         properties: {
-          addressPrefix: '10.3.0.0/16'
+          addressPrefix: '10.1.0.0/16'
         }
       }
       {
         name: 'AzureBastionSubnet'
         properties: {
-          addressPrefix: '10.4.0.0/26'
+          addressPrefix: '10.2.0.0/26'
+        }
+      }
+      {
+        name: 'SystemNodeSubnet'
+        properties: {
+          addressPrefix: '10.3.0.0/16'
+          natGateway: {
+            id: resNatGw.id
+          }
+        }
+      }
+      {
+        name: 'SystemPodSubnet'
+        properties: {
+          addressPrefix: '10.4.0.0/16'
+          natGateway: {
+            id: resNatGw.id
+          }
+        }
+      }
+      {
+        name: 'ApplicationNodeSubnet'
+        properties: {
+          addressPrefix: '10.5.0.0/16'
+          natGateway: {
+            id: resNatGw.id
+          }
+        }
+      }
+      {
+        name: 'ApplicationPodSubnet'
+        properties: {
+          addressPrefix: '10.6.0.0/16'
+          natGateway: {
+            id: resNatGw.id
+          }
         }
       }
     ]
@@ -79,29 +97,29 @@ resource resAksCluster 'Microsoft.ContainerService/managedClusters@2023-09-01' =
         name: 'system'
         count: 1
         vmSize: 'Standard_DS2_v2'
-        maxPods: 30
+        maxPods: 250
         maxCount: 20
         minCount: 1
         enableAutoScaling: true
         osType: 'Linux'
         osSKU: 'CBLMariner'
         mode: 'System'
-        vnetSubnetID: resVnet.properties.subnets[0].id
-        podSubnetID: resVnet.properties.subnets[1].id
+        vnetSubnetID: resVnet.properties.subnets[2].id
+        podSubnetID: resVnet.properties.subnets[3].id
       }
       {
         name: 'application'
         count: 1
         vmSize: 'Standard_DS2_v2'
-        maxPods: 30
+        maxPods: 250
         maxCount: 20
         minCount: 1
         enableAutoScaling: true
         osType: 'Linux'
         osSKU: 'CBLMariner'
         mode: 'System'
-        vnetSubnetID: resVnet.properties.subnets[0].id
-        podSubnetID: resVnet.properties.subnets[1].id
+        vnetSubnetID: resVnet.properties.subnets[4].id
+        podSubnetID: resVnet.properties.subnets[5].id
       }
     ]
     aadProfile: {
@@ -213,7 +231,7 @@ resource resNatGw 'Microsoft.Network/natGateways@2023-05-01' = {
 //             id: resBasPublicIP.id
 //           }
 //           subnet: {
-//             id: resVnet.properties.subnets[3].id
+//             id: resVnet.properties.subnets[1].id
 //           }
 //         }
 //       }
@@ -731,7 +749,7 @@ resource resAppgw 'Microsoft.Network/applicationGateways@2023-05-01' = {
         name: 'ipConfig'
         properties: {
           subnet: {
-            id: resVnet.properties.subnets[2].id
+            id: resVnet.properties.subnets[0].id
           }
         }
       }
