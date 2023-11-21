@@ -10,6 +10,8 @@ var varAcrPullRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization
 var varMonitoringReaderRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '43d0d8ad-25c7-4714-9337-8ba259a9fe05')
 var varMonitoringDataReaderRoleId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b0d8363b-8ddd-447d-831f-62ca05bff136')
 var varGrafanaAdminRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '22926164-76b3-42b3-bc55-97df8dab3e41')
+var varAppGwNetContributorRoleDefinitionId = resourceId('Microsoft.Authorization/roleDefinitions', '4d97b98b-1d4f-4787-a291-c67834d212e7')
+var varAppGwContributorRoleDefinitionId = resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
 
 
 //Virtual Network
@@ -36,7 +38,7 @@ resource resVnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
         }
       }
       {
-        name: 'SystemNodeSubnet'
+        name: 'AksClusterNodeSubnet'
         properties: {
           addressPrefix: '10.3.0.0/16'
           natGateway: {
@@ -45,27 +47,9 @@ resource resVnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
         }
       }
       {
-        name: 'SystemPodSubnet'
+        name: 'AksClusterPodSubnet'
         properties: {
           addressPrefix: '10.4.0.0/16'
-          natGateway: {
-            id: resNatGw.id
-          }
-        }
-      }
-      {
-        name: 'ApplicationNodeSubnet'
-        properties: {
-          addressPrefix: '10.5.0.0/16'
-          natGateway: {
-            id: resNatGw.id
-          }
-        }
-      }
-      {
-        name: 'ApplicationPodSubnet'
-        properties: {
-          addressPrefix: '10.6.0.0/16'
           natGateway: {
             id: resNatGw.id
           }
@@ -83,19 +67,18 @@ resource resAksCluster 'Microsoft.ContainerService/managedClusters@2023-09-01' =
     type: 'SystemAssigned'
   }
   properties: {
-    kubernetesVersion: '1.26.6'
+    kubernetesVersion: '1.27.7'
     dnsPrefix: 'aks-${parInitials}-akscluster-dns'
     enableRBAC: true
     networkProfile: {
       networkPlugin: 'azure'
       networkPolicy: 'azure'
       networkDataplane: 'azure'
-      loadBalancerSku: 'standard'
     }
     agentPoolProfiles: [
       {
         name: 'system'
-        count: 1
+        count: 2
         vmSize: 'Standard_DS2_v2'
         maxPods: 250
         maxCount: 20
@@ -109,7 +92,7 @@ resource resAksCluster 'Microsoft.ContainerService/managedClusters@2023-09-01' =
       }
       {
         name: 'application'
-        count: 1
+        count: 2
         vmSize: 'Standard_DS2_v2'
         maxPods: 250
         maxCount: 20
@@ -118,8 +101,8 @@ resource resAksCluster 'Microsoft.ContainerService/managedClusters@2023-09-01' =
         osType: 'Linux'
         osSKU: 'CBLMariner'
         mode: 'System'
-        vnetSubnetID: resVnet.properties.subnets[4].id
-        podSubnetID: resVnet.properties.subnets[5].id
+        vnetSubnetID: resVnet.properties.subnets[2].id
+        podSubnetID: resVnet.properties.subnets[3].id
       }
     ]
     aadProfile: {
@@ -245,7 +228,7 @@ resource resLaw 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   location: parLocation
 }
 
-//Container Insights
+//Container Insights DCR + DCR Association
 resource resAksCiDcr 'Microsoft.Insights/dataCollectionRules@2022-06-01' = {
   name: 'aks-${parInitials}-aksci-dcr'
   location: parLocation
@@ -294,7 +277,7 @@ resource resAksCiDcrA 'Microsoft.Insights/dataCollectionRuleAssociations@2022-06
   }
 }
 
-//Prometheus
+//Prometheus + DCR + DCE + DCR Association + Rule Groups
 resource resMspromMonitorWorkspace 'Microsoft.Monitor/accounts@2023-04-03' = {
   name: 'aks-${parInitials}-msprom-monitorworkspace'
   location: parLocation
@@ -669,7 +652,7 @@ resource resNodeAndKubernetesRecordingRuleGroupNameWin 'Microsoft.AlertsManageme
   }
 }
 
-//Grafana
+//Grafana + Role Assignments
 resource resGrafana 'Microsoft.Dashboard/grafana@2022-08-01' =  {
   name: 'aks-${parInitials}-grafana'
   location: parLocation
@@ -724,7 +707,7 @@ resource grafanaAdminRoleAssignment 'Microsoft.Authorization/roleAssignments@202
 
 
 
-//Application Gateway + App GW PIP + App GW WAF
+//Application Gateway + App GW PIP + App GW WAF + Managed Identity + Role Assignments
 resource resAppgwPublicIP 'Microsoft.Network/publicIPAddresses@2023-05-01' = {
   name: 'aks-${parInitials}-appgw-pip'
   location: parLocation
@@ -735,7 +718,26 @@ resource resAppgwPublicIP 'Microsoft.Network/publicIPAddresses@2023-05-01' = {
     publicIPAllocationMethod: 'Static'
   }
 }
-
+resource resAppGwIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30' = {
+  name: 'aks-${parInitials}-appgw-identity'
+  location: parLocation
+}
+resource appGwNetContributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
+  name: guid(resourceGroup().id, resAppgw.id, varAppGwNetContributorRoleDefinitionId)
+  properties: {
+    roleDefinitionId: varAppGwNetContributorRoleDefinitionId
+    principalId: reference(resAksCluster.id, '2023-08-01', 'Full').properties.addonProfiles.ingressApplicationGateway.identity.objectId
+    principalType: 'ServicePrincipal'
+  }
+}
+resource resAppGwContributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
+  name: guid(resourceGroup().id, resAppgw.id, varAppGwContributorRoleDefinitionId)
+  properties: {
+    roleDefinitionId: varAppGwContributorRoleDefinitionId
+    principalId: reference(resAksCluster.id, '2023-08-01', 'Full').properties.addonProfiles.ingressApplicationGateway.identity.objectId
+    principalType: 'ServicePrincipal'
+  }
+}
 resource resAppgw 'Microsoft.Network/applicationGateways@2023-05-01' = {
   name: 'aks-${parInitials}-appgw'
   location: parLocation
@@ -784,7 +786,7 @@ resource resAppgw 'Microsoft.Network/applicationGateways@2023-05-01' = {
           port: 80
           protocol: 'Http'
           cookieBasedAffinity: 'Disabled'
-          pickHostNameFromBackendAddress: false
+          pickHostNameFromBackendAddress: true
         }
       }
     ]
@@ -828,8 +830,14 @@ resource resAppgw 'Microsoft.Network/applicationGateways@2023-05-01' = {
       maxCapacity: 10
     }
   }
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${resAppGwIdentity.id}': {
+      }
+    }
+  }
 }
-
 resource resAppgwWaf 'Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies@2023-05-01' = {
   name: 'aks-${parInitials}-appgw-waf'
   location: parLocation
@@ -852,3 +860,41 @@ resource resAppgwWaf 'Microsoft.Network/ApplicationGatewayWebApplicationFirewall
   }
 }
 
+//Disk Encryption Key Vault
+// resource resKv 'Microsoft.KeyVault/vaults@2023-02-01' = {
+//   name: 'aks-${parInitials}-kv'
+//   location: parLocation
+//   tags: {
+//     Dept: 'coreServices'
+//     Owner: 'coreServicesOwner'
+//   }
+//   properties: {
+//     enabledForDeployment: false
+//     enabledForTemplateDeployment: false
+//     enabledForDiskEncryption: true
+//     publicNetworkAccess: 'Enabled'
+    
+//     tenantId: parTenantId
+//     accessPolicies: [
+//       {
+//         tenantId: parTenantId
+//         objectId: parUserObjectId
+//         permissions: {
+//           keys: [
+//             'all'
+//           ]
+//           secrets: [
+//             'all'
+//           ]
+//           certificates: [
+//             'all'
+//           ]
+//         }
+//       }
+//     ]
+//     sku: {
+//       name: 'standard'
+//       family: 'A'
+//     }
+//   }
+// }

@@ -3,8 +3,8 @@ az login
 az account show
 az ad group list
 
-$clientName = 'ty4mcqueen'
-$clientInitials = 'tymc'
+$clientName = 'tyler'
+$clientInitials = 'tcm'
 
 $tenantId = 'd4003661-f87e-4237-9a9b-8b9c31ba2467'
 $entraGroupId = 'c049d1ab-87d3-491b-9c93-8bea50fbfbc3'
@@ -35,7 +35,12 @@ az aks get-credentials -n $aksClusterName -g $rgName
 
 kubectl create namespace production
 
-kubectl apply -f deploy/container-azm-ms-agentconfig.yaml
-
 kubectl apply -f azure-voting-app-redis/azure-vote-all-in-one-redis.yaml --namespace production
+
+kubectl apply -f deploy/container-azm-ms-agentconfig.yaml
+kubectl autoscale deployment azure-vote-front --namespace production --cpu-percent=50 --min=1 --max=10
+kubectl autoscale deployment azure-vote-back --namespace production --cpu-percent=50 --min=1 --max=10
+
+kubectl apply -f deploy/ingress-azure-vote-front.yaml --namespace production
+
 kubectl get service azure-vote-front --namespace production --watch
