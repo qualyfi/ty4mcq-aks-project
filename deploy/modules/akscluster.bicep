@@ -4,11 +4,12 @@ param parTenantId string
 param parEntraGroupId string
 param parAppgwName string
 param parAcrName string
+param parUserId string
 
 var varAcrPullRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
 var varMonitoringReaderRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '43d0d8ad-25c7-4714-9337-8ba259a9fe05')
 var varMonitoringDataReaderRoleId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b0d8363b-8ddd-447d-831f-62ca05bff136')
-// var varGrafanaAdminRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '22926164-76b3-42b3-bc55-97df8dab3e41')
+var varGrafanaAdminRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '22926164-76b3-42b3-bc55-97df8dab3e41')
 
 
 //Virtual Network
@@ -23,7 +24,7 @@ resource resVnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
     }
     subnets: [
       {
-        name: 'aksCluster'
+        name: 'AksClusterNodeSubnet'
         properties: {
           addressPrefix: '10.1.0.0/16'
           natGateway: {
@@ -32,15 +33,24 @@ resource resVnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
         }
       }
       {
-        name: 'appGw'
+        name: 'AksClusterPodSubnet'
         properties: {
           addressPrefix: '10.2.0.0/16'
+          natGateway: {
+            id: resNatGw.id
+          }
+        }
+      }
+      {
+        name: 'AppGwSubnet'
+        properties: {
+          addressPrefix: '10.3.0.0/16'
         }
       }
       {
         name: 'AzureBastionSubnet'
         properties: {
-          addressPrefix: '10.3.0.0/26'
+          addressPrefix: '10.4.0.0/26'
         }
       }
     ]
@@ -77,6 +87,7 @@ resource resAksCluster 'Microsoft.ContainerService/managedClusters@2023-09-01' =
         osSKU: 'CBLMariner'
         mode: 'System'
         vnetSubnetID: resVnet.properties.subnets[0].id
+        podSubnetID: resVnet.properties.subnets[1].id
       }
       {
         name: 'application'
@@ -90,6 +101,7 @@ resource resAksCluster 'Microsoft.ContainerService/managedClusters@2023-09-01' =
         osSKU: 'CBLMariner'
         mode: 'System'
         vnetSubnetID: resVnet.properties.subnets[0].id
+        podSubnetID: resVnet.properties.subnets[1].id
       }
     ]
     aadProfile: {
@@ -201,7 +213,7 @@ resource resNatGw 'Microsoft.Network/natGateways@2023-05-01' = {
 //             id: resBasPublicIP.id
 //           }
 //           subnet: {
-//             id: resVnet.properties.subnets[2].id
+//             id: resVnet.properties.subnets[3].id
 //           }
 //         }
 //       }
@@ -664,7 +676,7 @@ resource resGrafana 'Microsoft.Dashboard/grafana@2022-08-01' =  {
     zoneRedundancy: 'Disabled'
   }
 }
-resource monitoringReaderRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource resMonitoringReaderRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name:  guid(resourceGroup().id, resMspromMonitorWorkspace.name, varMonitoringReaderRoleDefinitionId)
   scope: resMspromMonitorWorkspace
   properties: {
@@ -680,6 +692,15 @@ resource resMonitoringDataReaderRoleAssignment 'Microsoft.Authorization/roleAssi
     roleDefinitionId: varMonitoringDataReaderRoleId
     principalId: resGrafana.identity.principalId
     principalType: 'ServicePrincipal'
+  }
+}
+resource grafanaAdminRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(parUserId)) {
+  name:  guid(resourceGroup().id, parUserId, varGrafanaAdminRoleDefinitionId)
+  scope: resGrafana
+  properties: {
+    roleDefinitionId: varGrafanaAdminRoleDefinitionId
+    principalId: parUserId
+    principalType: 'User'
   }
 }
 
@@ -710,7 +731,7 @@ resource resAppgw 'Microsoft.Network/applicationGateways@2023-05-01' = {
         name: 'ipConfig'
         properties: {
           subnet: {
-            id: resVnet.properties.subnets[1].id
+            id: resVnet.properties.subnets[2].id
           }
         }
       }
