@@ -15,7 +15,6 @@ var varGrafanaAdminRoleDefinitionId = subscriptionResourceId('Microsoft.Authoriz
 var varAppGwNetContributorRoleDefinitionId = resourceId('Microsoft.Authorization/roleDefinitions', '4d97b98b-1d4f-4787-a291-c67834d212e7')
 var varAppGwContributorRoleDefinitionId = resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
 
-
 //Virtual Network
 resource resVnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
   name: 'aks-${parInitials}-vnet'

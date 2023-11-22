@@ -16,7 +16,7 @@ module modAksCluster 'modules/akscluster.bicep' = {
     parAppgwName: 'aks-${parInitials}-appgw'
     parAcrName: parAcrName
     parUserId: parUserId
-    parSshPublicKey: parSshPublicKey
     parAksClusterAdminUsername: 'ty4mcq'
+    parSshPublicKey: parSshPublicKey
   }
 }
