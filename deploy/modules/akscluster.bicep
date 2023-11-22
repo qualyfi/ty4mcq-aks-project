@@ -217,39 +217,39 @@ resource resNatGw 'Microsoft.Network/natGateways@2023-05-01' = {
 }
 
 //Bastion + Bastion PIP
-// resource resBasPublicIP 'Microsoft.Network/publicIPAddresses@2023-05-01' = {
-//   name: 'aks-${parInitials}-bas-pip'
-//   location: parLocation
-//   sku: {
-//     name: 'Standard'
-//   }
-//   properties: {
-//     publicIPAllocationMethod: 'Static'
-//   }
-// }
-// resource resBas 'Microsoft.Network/bastionHosts@2023-05-01' = {
-//   name: 'aks-${parInitials}-bas'
-//   location: parLocation
-//   sku: {
-//     name: 'Standard'
-//   }
-//   properties: {
-//     ipConfigurations: [
-//       {
-//         name: 'ipConfig'
-//         properties: {
-//           privateIPAllocationMethod:'Dynamic'
-//           publicIPAddress: {
-//             id: resBasPublicIP.id
-//           }
-//           subnet: {
-//             id: resVnet.properties.subnets[1].id
-//           }
-//         }
-//       }
-//     ]
-//   }
-// }
+resource resBasPublicIP 'Microsoft.Network/publicIPAddresses@2023-05-01' = {
+  name: 'aks-${parInitials}-bas-pip'
+  location: parLocation
+  sku: {
+    name: 'Standard'
+  }
+  properties: {
+    publicIPAllocationMethod: 'Static'
+  }
+}
+resource resBas 'Microsoft.Network/bastionHosts@2023-05-01' = {
+  name: 'aks-${parInitials}-bas'
+  location: parLocation
+  sku: {
+    name: 'Standard'
+  }
+  properties: {
+    ipConfigurations: [
+      {
+        name: 'ipConfig'
+        properties: {
+          privateIPAllocationMethod:'Dynamic'
+          publicIPAddress: {
+            id: resBasPublicIP.id
+          }
+          subnet: {
+            id: resVnet.properties.subnets[1].id
+          }
+        }
+      }
+    ]
+  }
+}
 
 //Log Analytics Workspace
 resource resLaw 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
