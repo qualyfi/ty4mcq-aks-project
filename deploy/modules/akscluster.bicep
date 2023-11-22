@@ -5,6 +5,8 @@ param parEntraGroupId string
 param parAppgwName string
 param parAcrName string
 param parUserId string
+param parAksClusterAdminUsername string
+param parSshPublicKey string
 
 var varAcrPullRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
 var varMonitoringReaderRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '43d0d8ad-25c7-4714-9337-8ba259a9fe05')
@@ -153,6 +155,16 @@ resource resAksCluster 'Microsoft.ContainerService/managedClusters@2023-09-01' =
           metricAnnotationsAllowList: ''
           metricLabelsAllowlist: ''
         }
+      }
+    }
+    linuxProfile: {
+      adminUsername: parAksClusterAdminUsername
+      ssh: {
+        publicKeys: [
+          {
+            keyData: parSshPublicKey
+          }
+        ]
       }
     }
   }

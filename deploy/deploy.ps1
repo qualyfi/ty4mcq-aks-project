@@ -13,6 +13,7 @@ $rgName = 'azure-devops-track-aks-exercise-'+$($clientName)
 $rgLocation = 'uksouth'
 $acrName = 'aks'+$($clientInitials)+'acr'
 $aksClusterName = 'aks-'+$($clientInitials)+'-akscluster'
+$sshKeyName = 'aks-'+$($clientInitials)+'-sshkey'
 $userId = (az ad signed-in-user show --query id --output tsv)
 # az config set defaults.group $rgName
 
@@ -24,7 +25,11 @@ docker compose down
 
 az group create --name $rgName --location $rgLocation
 
-az deployment group create --resource-group $rgName --template-file .\deploy\main.bicep --parameters parLocation=$rgLocation parInitials=$clientInitials parTenantId=$tenantId parEntraGroupId=$entraGroupId parAcrName=$acrName parUserId=$userId
+az sshkey create --name $sshKeyName --resource-group $rgName
+ssh-keygen -m PEM -t rsa -b 4096 -f ./$sshKeyName
+$sshPublicKey=$(awk '{print $2}' $sshKeyName.pub)
+
+az deployment group create --resource-group $rgName --template-file .\deploy\main.bicep --parameters parLocation=$rgLocation parInitials=$clientInitials parTenantId=$tenantId parEntraGroupId=$entraGroupId parAcrName=$acrName parUserId=$userId parSshPublicKey=$sshPublicKey
 
 az acr build --registry $acrName -g $rgName --image mcr.microsoft.com/azuredocs/azure-vote-front:v1 ./azure-voting-app-redis/azure-vote
 az acr build --registry $acrName -g $rgName --image mcr.microsoft.com/oss/bitnami/redis:6.0.8 ./azure-voting-app-redis/azure-vote

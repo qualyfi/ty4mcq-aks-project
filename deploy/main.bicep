@@ -4,6 +4,7 @@ param parTenantId string
 param parEntraGroupId string
 param parAcrName string
 param parUserId string
+param parSshPublicKey string
 
 module modAksCluster 'modules/akscluster.bicep' = {
   name: 'aksCluster'
@@ -15,5 +16,7 @@ module modAksCluster 'modules/akscluster.bicep' = {
     parAppgwName: 'aks-${parInitials}-appgw'
     parAcrName: parAcrName
     parUserId: parUserId
+    parSshPublicKey: parSshPublicKey
+    parAksClusterAdminUsername: 'ty4mcq'
   }
 }
