@@ -14,6 +14,7 @@ $rgLocation = 'uksouth'
 $acrName = 'aks'+$($clientInitials)+'acr'
 $aksClusterName = 'aks-'+$($clientInitials)+'-akscluster'
 $sshKeyName = 'aks-'+$($clientInitials)+'-sshkey'
+$sshPublicKeyFile = $($sshKeyName)+'.pub'
 $userId = (az ad signed-in-user show --query id --output tsv)
 # az config set defaults.group $rgName
 
@@ -27,7 +28,8 @@ az group create --name $rgName --location $rgLocation
 
 az sshkey create --name $sshKeyName --resource-group $rgName
 ssh-keygen -m PEM -t rsa -b 4096 -f ./$sshKeyName
-$sshPublicKey=$(awk '{print $2}' $sshKeyName.pub)
+$sshPublicKey = 'ssh-rsa '+(Get-Content $sshPublicKeyFile | ForEach-Object { (($_ -split ' ')[1]).Trim() })
+
 
 az deployment group create --resource-group $rgName --template-file .\deploy\main.bicep --parameters parLocation=$rgLocation parInitials=$clientInitials parTenantId=$tenantId parEntraGroupId=$entraGroupId parAcrName=$acrName parUserId=$userId parSshPublicKey=$sshPublicKey
 
