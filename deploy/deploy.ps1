@@ -3,8 +3,8 @@ az login
 az account show
 az ad group list
 
-$clientName = 'tyler'
-$clientInitials = 'tcm'
+$clientName = 'tyler4mcque'
+$clientInitials = 'tycmc'
 
 $tenantId = 'd4003661-f87e-4237-9a9b-8b9c31ba2467'
 $entraGroupId = 'c049d1ab-87d3-491b-9c93-8bea50fbfbc3'

@@ -38,7 +38,7 @@ resource resVnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
         }
       }
       {
-        name: 'AksClusterNodeSubnet'
+        name: 'SystemNodeSubnet'
         properties: {
           addressPrefix: '10.3.0.0/16'
           natGateway: {
@@ -47,9 +47,27 @@ resource resVnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
         }
       }
       {
-        name: 'AksClusterPodSubnet'
+        name: 'SystemPodSubnet'
         properties: {
           addressPrefix: '10.4.0.0/16'
+          natGateway: {
+            id: resNatGw.id
+          }
+        }
+      }
+      {
+        name: 'ApplicationNodeSubnet'
+        properties: {
+          addressPrefix: '10.5.0.0/16'
+          natGateway: {
+            id: resNatGw.id
+          }
+        }
+      }
+      {
+        name: 'ApplicationPodSubnet'
+        properties: {
+          addressPrefix: '10.6.0.0/16'
           natGateway: {
             id: resNatGw.id
           }
@@ -101,8 +119,8 @@ resource resAksCluster 'Microsoft.ContainerService/managedClusters@2023-09-01' =
         osType: 'Linux'
         osSKU: 'CBLMariner'
         mode: 'System'
-        vnetSubnetID: resVnet.properties.subnets[2].id
-        podSubnetID: resVnet.properties.subnets[3].id
+        vnetSubnetID: resVnet.properties.subnets[4].id
+        podSubnetID: resVnet.properties.subnets[5].id
       }
     ]
     aadProfile: {
