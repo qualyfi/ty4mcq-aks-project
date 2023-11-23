@@ -7,10 +7,7 @@ param parAcrName string
 param parUserId string
 param parAksClusterAdminUsername string
 param parSshPublicKey string
-param parGuidSuffix string
-param parExampleSecretName string
-@secure()
-param parExampleSecretValue string
+param parAksClusterName string
 
 var varAcrPullRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
 var varMonitoringReaderRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '43d0d8ad-25c7-4714-9337-8ba259a9fe05')
@@ -84,7 +81,7 @@ resource resVnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
 
 //AKS Cluster
 resource resAksCluster 'Microsoft.ContainerService/managedClusters@2023-09-01' = {
-  name: 'aks-${parInitials}-akscluster'
+  name: parAksClusterName
   location: parLocation
   identity: {
     type: 'SystemAssigned'
@@ -890,31 +887,5 @@ resource resAppgwWaf 'Microsoft.Network/ApplicationGatewayWebApplicationFirewall
         }
       ]
     }
-  }
-}
-
-//Key Vault
-resource resKv 'Microsoft.KeyVault/vaults@2023-02-01' = {
-  name: 'aks-${parInitials}-kv-${parGuidSuffix}'
-  location: parLocation
-  properties: {
-    enableRbacAuthorization: true
-    enabledForDeployment: false
-    enabledForTemplateDeployment: false
-    enabledForDiskEncryption: false
-    publicNetworkAccess: 'Enabled'
-    tenantId: parTenantId
-    accessPolicies: []
-    sku: {
-      name: 'standard'
-      family: 'A'
-    }
-  }
-}
-resource resSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
-  parent: resKv
-  name: parExampleSecretName
-  properties: {
-    value: parExampleSecretValue
   }
 }
