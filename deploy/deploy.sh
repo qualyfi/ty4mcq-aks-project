@@ -3,8 +3,8 @@ az login
 az account show
 az ad group list
 
-clientName="tylermcqueen"
-clientInitials="tm"
+clientName="mcquetylecm"
+clientInitials="qtmc"
 
 tenantId="d4003661-f87e-4237-9a9b-8b9c31ba2467"
 entraGroupId="c049d1ab-87d3-491b-9c93-8bea50fbfbc3"
@@ -60,4 +60,57 @@ kubectl autoscale deployment azure-vote-back --namespace production --cpu-percen
 
 kubectl apply -f deploy/ingress-azure-vote-front.yaml --namespace production
 
+clientId=$(az aks show -g $rgName -n $aksClusterName --query addonProfiles.azureKeyvaultSecretsProvider.identity.clientId -o tsv)
+secretProviderClassName="aks-$clientInitials-spc"
+keyVaultName="aks-$clientInitials-kv"
+
+cat <<EOF | kubectl apply -f -
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: $secretProviderClassName
+  namespace: production
+spec:
+  provider: azure
+  parameters:
+    usePodIdentity: "false"
+    useVMManagedIdentity: "true"
+    userAssignedIdentityID: $clientId
+    keyvaultName: $keyVaultName
+    objects: |
+      array:
+        - |
+          objectName: "ExampleSecret"
+          objectType: secret
+    tenantId: $tenantId
+EOF
+
+
+cat << EOF | envsubst | kubectl apply -f -
+kind: Pod
+apiVersion: v1
+metadata:
+  name: busybox-secrets-store-inline-system-msi
+spec:
+  containers:
+    - name: busybox
+      image: k8s.gcr.io/e2e-test-images/busybox:1.29-1
+      command:
+        - "/bin/sleep"
+        - "10000"
+      volumeMounts:
+      - name: secrets-store01
+        mountPath: "/mnt/secrets-store"
+        readOnly: true
+  volumes:
+    - name: secrets-store01
+      csi:
+        driver: secrets-store.csi.k8s.io
+        readOnly: true
+        volumeAttributes:
+          secretProviderClass: $secretProviderClassName
+EOF
+
+kubectl exec busybox-secrets-store-inline-system-msi -- ls /mnt/secrets-store/
+kubectl exec busybox-secrets-store-inline-user-msi -- cat /mnt/secrets-store/ExampleSecret
 kubectl get service azure-vote-front --namespace production --watch

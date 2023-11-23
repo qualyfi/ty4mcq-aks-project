@@ -18,5 +18,7 @@ module modAksCluster 'modules/akscluster.bicep' = {
     parUserId: parUserId
     parAksClusterAdminUsername: 'ty4mcq'
     parSshPublicKey: parSshPublicKey
+    parExampleSecretName: 'ExampleSecret'
+    parExampleSecretValue: 'idkmayn'
   }
 }

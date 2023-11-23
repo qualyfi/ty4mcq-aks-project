@@ -7,6 +7,9 @@ param parAcrName string
 param parUserId string
 param parAksClusterAdminUsername string
 param parSshPublicKey string
+param parExampleSecretName string
+@secure()
+param parExampleSecretValue string
 
 var varAcrPullRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
 var varMonitoringReaderRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '43d0d8ad-25c7-4714-9337-8ba259a9fe05')
@@ -14,6 +17,7 @@ var varMonitoringDataReaderRoleId = subscriptionResourceId('Microsoft.Authorizat
 var varGrafanaAdminRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '22926164-76b3-42b3-bc55-97df8dab3e41')
 var varAppGwNetContributorRoleDefinitionId = resourceId('Microsoft.Authorization/roleDefinitions', '4d97b98b-1d4f-4787-a291-c67834d212e7')
 var varAppGwContributorRoleDefinitionId = resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
+var varKeyVaultAdministratorId = resourceId('Microsoft.Authorization/roleDefinitions', '00482a5a-887f-4fb3-b363-3b7fe8e74483')
 
 //Virtual Network
 resource resVnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
@@ -133,6 +137,9 @@ resource resAksCluster 'Microsoft.ContainerService/managedClusters@2023-09-01' =
     }
     disableLocalAccounts: true
     addonProfiles: {
+      azureKeyVaultSecretsProvider: {
+        enabled: true
+      }
       ingressApplicationGateway: {
         enabled: true
         config: {
@@ -217,39 +224,39 @@ resource resNatGw 'Microsoft.Network/natGateways@2023-05-01' = {
 }
 
 //Bastion + Bastion PIP
-resource resBasPublicIP 'Microsoft.Network/publicIPAddresses@2023-05-01' = {
-  name: 'aks-${parInitials}-bas-pip'
-  location: parLocation
-  sku: {
-    name: 'Standard'
-  }
-  properties: {
-    publicIPAllocationMethod: 'Static'
-  }
-}
-resource resBas 'Microsoft.Network/bastionHosts@2023-05-01' = {
-  name: 'aks-${parInitials}-bas'
-  location: parLocation
-  sku: {
-    name: 'Standard'
-  }
-  properties: {
-    ipConfigurations: [
-      {
-        name: 'ipConfig'
-        properties: {
-          privateIPAllocationMethod:'Dynamic'
-          publicIPAddress: {
-            id: resBasPublicIP.id
-          }
-          subnet: {
-            id: resVnet.properties.subnets[1].id
-          }
-        }
-      }
-    ]
-  }
-}
+// resource resBasPublicIP 'Microsoft.Network/publicIPAddresses@2023-05-01' = {
+//   name: 'aks-${parInitials}-bas-pip'
+//   location: parLocation
+//   sku: {
+//     name: 'Standard'
+//   }
+//   properties: {
+//     publicIPAllocationMethod: 'Static'
+//   }
+// }
+// resource resBas 'Microsoft.Network/bastionHosts@2023-05-01' = {
+//   name: 'aks-${parInitials}-bas'
+//   location: parLocation
+//   sku: {
+//     name: 'Standard'
+//   }
+//   properties: {
+//     ipConfigurations: [
+//       {
+//         name: 'ipConfig'
+//         properties: {
+//           privateIPAllocationMethod:'Dynamic'
+//           publicIPAddress: {
+//             id: resBasPublicIP.id
+//           }
+//           subnet: {
+//             id: resVnet.properties.subnets[1].id
+//           }
+//         }
+//       }
+//     ]
+//   }
+// }
 
 //Log Analytics Workspace
 resource resLaw 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
@@ -724,7 +731,7 @@ resource resMonitoringDataReaderRoleAssignment 'Microsoft.Authorization/roleAssi
     principalType: 'ServicePrincipal'
   }
 }
-resource grafanaAdminRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(parUserId)) {
+resource resGrafanaAdminRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(parUserId)) {
   name:  guid(resourceGroup().id, parUserId, varGrafanaAdminRoleDefinitionId)
   scope: resGrafana
   properties: {
@@ -747,11 +754,11 @@ resource resAppgwPublicIP 'Microsoft.Network/publicIPAddresses@2023-05-01' = {
     publicIPAllocationMethod: 'Static'
   }
 }
-resource resAppGwIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2018-11-30' = {
+resource resAppGwIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: 'aks-${parInitials}-appgw-identity'
   location: parLocation
 }
-resource appGwNetContributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
+resource resappGwNetContributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(resourceGroup().id, resAppgw.id, varAppGwNetContributorRoleDefinitionId)
   properties: {
     roleDefinitionId: varAppGwNetContributorRoleDefinitionId
@@ -759,7 +766,7 @@ resource appGwNetContributorRoleAssignment 'Microsoft.Authorization/roleAssignme
     principalType: 'ServicePrincipal'
   }
 }
-resource resAppGwContributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
+resource resAppGwContributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(resourceGroup().id, resAppgw.id, varAppGwContributorRoleDefinitionId)
   properties: {
     roleDefinitionId: varAppGwContributorRoleDefinitionId
@@ -889,41 +896,41 @@ resource resAppgwWaf 'Microsoft.Network/ApplicationGatewayWebApplicationFirewall
   }
 }
 
-//Disk Encryption Key Vault
-// resource resKv 'Microsoft.KeyVault/vaults@2023-02-01' = {
-//   name: 'aks-${parInitials}-kv'
-//   location: parLocation
-//   tags: {
-//     Dept: 'coreServices'
-//     Owner: 'coreServicesOwner'
-//   }
-//   properties: {
-//     enabledForDeployment: false
-//     enabledForTemplateDeployment: false
-//     enabledForDiskEncryption: true
-//     publicNetworkAccess: 'Enabled'
-    
-//     tenantId: parTenantId
-//     accessPolicies: [
-//       {
-//         tenantId: parTenantId
-//         objectId: parUserObjectId
-//         permissions: {
-//           keys: [
-//             'all'
-//           ]
-//           secrets: [
-//             'all'
-//           ]
-//           certificates: [
-//             'all'
-//           ]
-//         }
-//       }
-//     ]
-//     sku: {
-//       name: 'standard'
-//       family: 'A'
-//     }
-//   }
-// }
+//Key Vault
+resource resKv 'Microsoft.KeyVault/vaults@2023-02-01' = {
+  name: 'aks-${parInitials}-kv'
+  location: parLocation
+  properties: {
+    enableRbacAuthorization: true
+    enabledForDeployment: false
+    enabledForTemplateDeployment: false
+    enabledForDiskEncryption: false
+    publicNetworkAccess: 'Enabled'
+    tenantId: parTenantId
+    accessPolicies: []
+    sku: {
+      name: 'standard'
+      family: 'A'
+    }
+  }
+}
+resource resSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: resKv
+  name: parExampleSecretName
+  properties: {
+    value: parExampleSecretValue
+  }
+}
+resource resKvIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: 'aks-${parInitials}-kv-identity'
+  location: parLocation
+}
+resource resKeyVaultAdministratorId 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(resourceGroup().id, resKv.id, varKeyVaultAdministratorId)
+  properties: {
+    roleDefinitionId: varKeyVaultAdministratorId
+    principalId: resKvIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
