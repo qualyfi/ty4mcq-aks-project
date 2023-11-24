@@ -49,71 +49,28 @@ kubectlNamespace="production"
 kubectl create namespace $kubectlNamespace
 
 az aks enable-addons --addons azure-keyvault-secrets-provider --name $aksClusterName --resource-group $rgName
-kubectl get pods -n kube-system -l 'app in (secrets-store-csi-driver,secrets-store-provider-azure)'
 
 az keyvault create -n $keyVaultName -g $rgName -l $location --enable-rbac-authorization
 az keyvault secret set --vault-name $keyVaultName -n $kvSecretName --value $kvSecretValue
-
-az aks show -g $rgName -n $aksClusterName --query addonProfiles.azureKeyvaultSecretsProvider.identity.clientId -o tsv
 
 export clientId="$(az aks show -g $rgName -n $aksClusterName --query addonProfiles.azureKeyvaultSecretsProvider.identity.clientId -o tsv)"
 export keyVaultId=$(az keyvault show --name $keyVaultName --resource-group $rgName --query id -o tsv)
 
 az role assignment create --role "Key Vault Administrator" --assignee $clientId --scope "/$keyVaultId"
 
-cat <<EOF | kubectl apply -f -
-apiVersion: secrets-store.csi.x-k8s.io/v1
-kind: SecretProviderClass
-metadata:
-  name: $secretProviderClassName
-  namespace: $kubectlNamespace
-spec:
-  provider: azure
-  parameters:
-    usePodIdentity: "false"
-    useVMManagedIdentity: "true"
-    userAssignedIdentityID: $clientId
-    keyvaultName: $keyVaultName
-    objects: |
-      array:
-        - |
-          objectName: "ExampleSecret"
-          objectType: secret
-    tenantId: $tenantId
-EOF
+export secretProviderClassName=$secretProviderClassName
+export clientId=$clientId
+export keyVaultName=$keyvaultName
+export tenantId=$tenantId
+export kvSecretName=$kvSecretName
 
-cat <<EOF | kubectl apply -f -
-kind: Pod
-apiVersion: v1
-metadata:
-  name: busybox-secrets-store-inline-user-msi
-  namespace: $kubectlNamespace
-spec:
-  containers:
-    - name: busybox
-      image: registry.k8s.io/e2e-test-images/busybox:1.29-4
-      command:
-        - "/bin/sleep"
-        - "10000"
-      volumeMounts:
-      - name: secrets-store01-inline
-        mountPath: "/mnt/secrets-store"
-        readOnly: true
-  volumes:
-    - name: secrets-store01-inline
-      csi:
-        driver: secrets-store.csi.k8s.io
-        readOnly: true
-        volumeAttributes:
-          secretProviderClass: "$secretProviderClassName"
-EOF
-
-kubectl exec busybox-secrets-store-inline-user-msi --namespace $kubectlNamespace -- ls mnt/secrets-store
-kubectl exec busybox-secrets-store-inline-user-msi --namespace $kubectlNamespace -- cat mnt/secrets-store/ExampleSecret
-
-kubectl apply -f deploy/manifest.yaml --namespace $kubectlNamespace
+envsubst < deploy/manifest.yaml | kubectl apply -f - --namespace $kubectlNamespace
 
 # kubectl apply -f deploy/container-azm-ms-agentconfig.yaml
 # kubectl autoscale deployment azure-vote-front --namespace $kubectlNamespace --cpu-percent=50 --min=1 --max=10
 # kubectl autoscale deployment azure-vote-back --namespace $kubectlNamespace --cpu-percent=50 --min=1 --max=10
+
+# kubectl get pods --namespace $kubectlNamespace
+
+# kubectl exec busybox-secrets-store-inline-user-msi --namespace $kubectlNamespace -- cat mnt/secrets-store/ExampleSecret
 
