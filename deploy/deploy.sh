@@ -21,6 +21,8 @@ keyVaultName="aks-$clientInitials-kv-$(shuf -i 0-9999999 -n 1)"
 kvSecretName="ExampleSecret"
 kvSecretValue="RaynersLane"
 
+kubectlNamespace="production"
+
 secretProviderClassName="aks-$clientInitials-spc"
 
 git clone https://github.com/Azure-Samples/azure-voting-app-redis
@@ -45,26 +47,24 @@ az acr build --registry $acrName -g $rgName --image mcr.microsoft.com/oss/bitnam
 
 az aks get-credentials -n $aksClusterName -g $rgName
 
-kubectlNamespace="production"
-kubectl create namespace $kubectlNamespace
-
 az aks enable-addons --addons azure-keyvault-secrets-provider --name $aksClusterName --resource-group $rgName
 
 az keyvault create -n $keyVaultName -g $rgName -l $location --enable-rbac-authorization
 az keyvault secret set --vault-name $keyVaultName -n $kvSecretName --value $kvSecretValue
 
 export clientId="$(az aks show -g $rgName -n $aksClusterName --query addonProfiles.azureKeyvaultSecretsProvider.identity.clientId -o tsv)"
-export keyVaultId=$(az keyvault show --name $keyVaultName --resource-group $rgName --query id -o tsv)
+export keyVaultId="$(az keyvault show --name $keyVaultName --resource-group $rgName --query id -o tsv)"
 
 az role assignment create --role "Key Vault Administrator" --assignee $clientId --scope "/$keyVaultId"
 
-export secretProviderClassName=$secretProviderClassName
-export clientId=$clientId
-export keyVaultName=$keyvaultName
-export tenantId=$tenantId
-export kvSecretName=$kvSecretName
+export yamlSecretProviderClassName=$secretProviderClassName
+export yamlClientId=$clientId
+export yamlKeyVaultName=$keyVaultName
+export yamlTenantId=$tenantId
+export yamlKvSecretName=$kvSecretName
 
-envsubst < deploy/manifest.yaml | kubectl apply -f - --namespace $kubectlNamespace
+# kubectl create namespace $kubectlNamespace
+# envsubst < deploy/manifest.yaml | kubectl apply -f - --namespace $kubectlNamespace
 
 # kubectl apply -f deploy/container-azm-ms-agentconfig.yaml
 # kubectl autoscale deployment azure-vote-front --namespace $kubectlNamespace --cpu-percent=50 --min=1 --max=10
