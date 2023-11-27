@@ -735,8 +735,6 @@ resource resGrafanaAdminRoleAssignment 'Microsoft.Authorization/roleAssignments@
   }
 }
 
-
-
 //Application Gateway + App GW PIP + App GW WAF + Managed Identity + Role Assignments
 resource resAppgwPublicIP 'Microsoft.Network/publicIPAddresses@2023-05-01' = {
   name: 'aks-${parInitials}-appgw-pip'

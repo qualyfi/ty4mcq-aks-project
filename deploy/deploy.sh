@@ -1,7 +1,7 @@
 az login
 
-clientName="tmcqueen"
-clientInitials="tm"
+clientName="tylermcqueen"
+clientInitials="tcm"
 
 tenantId="d4003661-f87e-4237-9a9b-8b9c31ba2467"
 entraGroupId="c049d1ab-87d3-491b-9c93-8bea50fbfbc3"
@@ -56,6 +56,8 @@ export clientId="$(az aks show -g $rgName -n $aksClusterName --query addonProfil
 export keyVaultId="$(az keyvault show --name $keyVaultName --resource-group $rgName --query id -o tsv)"
 
 az role assignment create --role "Key Vault Administrator" --assignee $clientId --scope "/$keyVaultId"
+az role assignment create --role "Key Vault Secrets User" --assignee $clientId --scope "/$keyVaultId"
+
 
 export yamlSecretProviderClassName=$secretProviderClassName
 export yamlClientId=$clientId
@@ -63,14 +65,15 @@ export yamlKeyVaultName=$keyVaultName
 export yamlTenantId=$tenantId
 export yamlKvSecretName=$kvSecretName
 
-# kubectl create namespace $kubectlNamespace
-# envsubst < deploy/manifest.yaml | kubectl apply -f - --namespace $kubectlNamespace
 
-# kubectl apply -f deploy/container-azm-ms-agentconfig.yaml
-# kubectl autoscale deployment azure-vote-front --namespace $kubectlNamespace --cpu-percent=50 --min=1 --max=10
-# kubectl autoscale deployment azure-vote-back --namespace $kubectlNamespace --cpu-percent=50 --min=1 --max=10
+kubectl create namespace $kubectlNamespace
+envsubst < deploy/manifest.yaml | kubectl apply -f - --namespace $kubectlNamespace
 
-# kubectl get pods --namespace $kubectlNamespace
+kubectl apply -f deploy/container-azm-ms-agentconfig.yaml
+kubectl autoscale deployment azure-vote-front --namespace $kubectlNamespace --cpu-percent=50 --min=1 --max=10
+kubectl autoscale deployment azure-vote-back --namespace $kubectlNamespace --cpu-percent=50 --min=1 --max=10
 
-# kubectl exec busybox-secrets-store-inline-user-msi --namespace $kubectlNamespace -- cat mnt/secrets-store/ExampleSecret
+kubectl get pods --namespace $kubectlNamespace
 
+# kubectl exec azure-vote-back-5d649d664c-dhdkt --namespace production -- cat mnt/secrets-store-back/ExampleSecret
+# kubectl exec azure-vote-front-6698487df4-8b6lp --namespace production -- cat mnt/secrets-store-front/ExampleSecret
