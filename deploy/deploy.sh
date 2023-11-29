@@ -1,7 +1,7 @@
 az login
 
 clientName="tylermcqueen"
-clientInitials="tcm"
+clientInitials="tm"
 
 tenantId="d4003661-f87e-4237-9a9b-8b9c31ba2467"
 entraGroupId="c049d1ab-87d3-491b-9c93-8bea50fbfbc3"
@@ -42,9 +42,6 @@ sshPublicKey=${arrayKey[@]:0:2}
 
 az deployment group create --resource-group $rgName --template-file ./deploy/main.bicep --parameters parLocation=$location parInitials=$clientInitials parTenantId=$tenantId parEntraGroupId=$entraGroupId parAcrName=$acrName parUserId=$userId parSshPublicKey="$sshPublicKey" parAksClusterName=$aksClusterName
 
-az acr build --registry $acrName -g $rgName --image mcr.microsoft.com/azuredocs/azure-vote-front:v1 ./azure-voting-app-redis/azure-vote
-az acr build --registry $acrName -g $rgName --image mcr.microsoft.com/oss/bitnami/redis:6.0.8 ./azure-voting-app-redis/azure-vote
-
 az aks get-credentials -n $aksClusterName -g $rgName
 
 az aks enable-addons --addons azure-keyvault-secrets-provider --name $aksClusterName --resource-group $rgName
@@ -58,13 +55,14 @@ export keyVaultId="$(az keyvault show --name $keyVaultName --resource-group $rgN
 az role assignment create --role "Key Vault Administrator" --assignee $clientId --scope "/$keyVaultId"
 az role assignment create --role "Key Vault Secrets User" --assignee $clientId --scope "/$keyVaultId"
 
+az acr build --registry $acrName -g $rgName --image mcr.microsoft.com/azuredocs/azure-vote-front:v1 ./azure-voting-app-redis/azure-vote
+az acr build --registry $acrName -g $rgName --image mcr.microsoft.com/oss/bitnami/redis:6.0.8 ./azure-voting-app-redis/azure-vote
 
 export yamlSecretProviderClassName=$secretProviderClassName
 export yamlClientId=$clientId
 export yamlKeyVaultName=$keyVaultName
 export yamlTenantId=$tenantId
 export yamlKvSecretName=$kvSecretName
-
 
 kubectl create namespace $kubectlNamespace
 envsubst < deploy/manifest.yaml | kubectl apply -f - --namespace $kubectlNamespace
@@ -74,6 +72,3 @@ kubectl autoscale deployment azure-vote-front --namespace $kubectlNamespace --cp
 kubectl autoscale deployment azure-vote-back --namespace $kubectlNamespace --cpu-percent=50 --min=1 --max=10
 
 kubectl get pods --namespace $kubectlNamespace
-
-# kubectl exec azure-vote-back-5d649d664c-dhdkt --namespace production -- cat mnt/secrets-store-back/ExampleSecret
-# kubectl exec azure-vote-front-6698487df4-8b6lp --namespace production -- cat mnt/secrets-store-front/ExampleSecret
