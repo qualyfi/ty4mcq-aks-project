@@ -1,14 +1,27 @@
 az login
 
-clientName="tylermcqueen"
-clientInitials="tm"
+# Enter Details Below
 
-tenantId="d4003661-f87e-4237-9a9b-8b9c31ba2467"
-entraGroupId="c049d1ab-87d3-491b-9c93-8bea50fbfbc3"
+################
+clientName="tylercm"
+clientInitials="tcm"
+location="uksouth"
+
+entraGroupName="AKS EID Admin Group"
+kvSecretName="ExampleSecret"
+kvSecretValue="RaynersLane"
+
+aksClusterAdminUsername="ty4mcq"
+
+kubectlNamespace="production"
+################
+
+tenantId="$(az account show --query tenantId -o tsv)"
+entraGroupId="$(az ad group list --display-name "$entraGroupName" --query "[].{id:id}" --output tsv)"
+
 userId=$(az ad signed-in-user show --query id --output tsv)
 
 rgName="azure-devops-track-aks-exercise-$clientName"
-location="uksouth"
 
 acrName="aksacr$clientInitials"
 
@@ -18,10 +31,6 @@ sshKeyName="aks-$clientInitials-sshkey"
 sshPublicKeyFile="$sshKeyName.pub"
 
 keyVaultName="aks-$clientInitials-kv-$(shuf -i 0-9999999 -n 1)"
-kvSecretName="ExampleSecret"
-kvSecretValue="RaynersLane"
-
-kubectlNamespace="production"
 
 secretProviderClassName="aks-$clientInitials-spc"
 
@@ -40,7 +49,7 @@ readKey=$(< $sshPublicKeyFile)
 arrayKey=($readKey)
 sshPublicKey=${arrayKey[@]:0:2}
 
-az deployment group create --resource-group $rgName --template-file ./deploy/main.bicep --parameters parLocation=$location parInitials=$clientInitials parTenantId=$tenantId parEntraGroupId=$entraGroupId parAcrName=$acrName parUserId=$userId parSshPublicKey="$sshPublicKey" parAksClusterName=$aksClusterName
+az deployment group create --resource-group $rgName --template-file ./deploy/main.bicep --parameters parLocation=$location parInitials=$clientInitials parTenantId=$tenantId parEntraGroupId=$entraGroupId parAcrName=$acrName parUserId=$userId parSshPublicKey="$sshPublicKey" parAksClusterName=$aksClusterName parAksClusterAdminUsername=$aksClusterAdminUsername
 
 az aks get-credentials -n $aksClusterName -g $rgName
 
@@ -65,9 +74,9 @@ export yamlTenantId=$tenantId
 export yamlKvSecretName=$kvSecretName
 
 kubectl create namespace $kubectlNamespace
-envsubst < deploy/manifest.yaml | kubectl apply -f - --namespace $kubectlNamespace
+envsubst < deploy/yaml/manifest.yaml | kubectl apply -f - --namespace $kubectlNamespace
 
-kubectl apply -f deploy/container-azm-ms-agentconfig.yaml
+kubectl apply -f deploy/yaml/container-azm-ms-agentconfig.yaml
 kubectl autoscale deployment azure-vote-front --namespace $kubectlNamespace --cpu-percent=50 --min=1 --max=10
 kubectl autoscale deployment azure-vote-back --namespace $kubectlNamespace --cpu-percent=50 --min=1 --max=10
 
