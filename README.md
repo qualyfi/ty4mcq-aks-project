@@ -1,5 +1,10 @@
 Tyler McQueen's AKS project for Qualyfi.
 
+To deploy, please run line:
+./deploy/deploy.sh
+
+Please ensure Docker is running locally before running deployment.
+
 Testing Methods
 
 From the node load a web page via the NAT Gateway:
