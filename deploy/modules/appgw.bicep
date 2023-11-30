@@ -17,7 +17,6 @@ resource resAppgwPublicIP 'Microsoft.Network/publicIPAddresses@2023-05-01' = {
 }
 
 //App GW Managed Identity + Role Assignments
-
 resource resAppGwIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: 'aks-${parInitials}-appgw-identity'
   location: parLocation

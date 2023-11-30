@@ -42,28 +42,36 @@ docker compose down
 
 az config set defaults.group=$rgName
 
+# Create Resouce Group
 az group create --name $rgName --location $location
 
+# Create SSH Key + Format for Parameter
 ssh-keygen -m PEM -t rsa -b 4096 -f ./$sshKeyName
 readKey=$(< $sshPublicKeyFile)
 arrayKey=($readKey)
 sshPublicKey=${arrayKey[@]:0:2}
 
+# Deploy Bicep Files
 az deployment group create --resource-group $rgName --template-file ./deploy/main.bicep --parameters parLocation=$location parInitials=$clientInitials parTenantId=$tenantId parEntraGroupId=$entraGroupId parAcrName=$acrName parUserId=$userId parSshPublicKey="$sshPublicKey" parAksClusterName=$aksClusterName parAksClusterAdminUsername=$aksClusterAdminUsername
 
+# Access AKS Cluster
 az aks get-credentials -n $aksClusterName -g $rgName
 
+# Enable CSI Driver
 az aks enable-addons --addons azure-keyvault-secrets-provider --name $aksClusterName --resource-group $rgName
 
+# Create Key Vault + Secret
 az keyvault create -n $keyVaultName -g $rgName -l $location --enable-rbac-authorization
 az keyvault secret set --vault-name $keyVaultName -n $kvSecretName --value $kvSecretValue
 
 export clientId="$(az aks show -g $rgName -n $aksClusterName --query addonProfiles.azureKeyvaultSecretsProvider.identity.clientId -o tsv)"
 export keyVaultId="$(az keyvault show --name $keyVaultName --resource-group $rgName --query id -o tsv)"
 
+# Assign Key Vault Roles to CSI Driver Managed Identity
 az role assignment create --role "Key Vault Administrator" --assignee $clientId --scope "/$keyVaultId"
 az role assignment create --role "Key Vault Secrets User" --assignee $clientId --scope "/$keyVaultId"
 
+# ACR Build
 az acr build --registry $acrName -g $rgName --image mcr.microsoft.com/azuredocs/azure-vote-front:v1 ./azure-voting-app-redis/azure-vote
 az acr build --registry $acrName -g $rgName --image mcr.microsoft.com/oss/bitnami/redis:6.0.8 ./azure-voting-app-redis/azure-vote
 
@@ -73,17 +81,18 @@ export yamlKeyVaultName=$keyVaultName
 export yamlTenantId=$tenantId
 export yamlKvSecretName=$kvSecretName
 
+# Create Namespace
 kubectl create namespace $kubectlNamespace
+
+# Substitute Variables + Apply Manifest File
 envsubst < deploy/yaml/manifest.yaml | kubectl apply -f - --namespace $kubectlNamespace
 
+# Enable Container Insights
 kubectl apply -f deploy/yaml/container-azm-ms-agentconfig.yaml
 
+# Enable HPA
 kubectl autoscale deployment azure-vote-front --namespace $kubectlNamespace --cpu-percent=50 --min=1 --max=10
 kubectl autoscale deployment azure-vote-back --namespace $kubectlNamespace --cpu-percent=50 --min=1 --max=10
 
 kubectl get pods --namespace $kubectlNamespace
 kubectl get hpa --namespace $kubectlNamespace
-
-# Testing
-# kubectl exec azure-vote-front-684fc7679f-t9kdt --namespace production -- cat ./secrets-store-front/ExampleSecret
-# kubectl exec azure-vote-back-8565bc6675-qxkzd --namespace production -- cat ./secrets-store-back/ExampleSecret

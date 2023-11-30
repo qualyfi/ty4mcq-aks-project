@@ -16,6 +16,7 @@ var varMonitoringReaderRoleDefinitionId = subscriptionResourceId('Microsoft.Auth
 var varMonitoringDataReaderRoleId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b0d8363b-8ddd-447d-831f-62ca05bff136')
 var varGrafanaAdminRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '22926164-76b3-42b3-bc55-97df8dab3e41')
 
+//Declaring Existing Resources
 resource resAcr 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
   name: parAcrName
 }

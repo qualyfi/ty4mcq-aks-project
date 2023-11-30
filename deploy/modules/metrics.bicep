@@ -3,6 +3,7 @@ param parInitials string
 param parAksClusterName string
 param parLawId string
 
+//Declaring Existing Resource
 resource resAksCluster 'Microsoft.ContainerService/managedClusters@2021-03-01' existing = {
   name: parAksClusterName
 }
@@ -62,7 +63,7 @@ resource resMspromMonitorWorkspace 'Microsoft.Monitor/accounts@2023-04-03' = {
   location: parLocation
 }
 
-//Prometheus
+//Prometheus Data Collection DCR + DCE + DCR Association
 resource resMspromDce 'Microsoft.Insights/dataCollectionEndpoints@2022-06-01' = {
   name: 'aks-${parInitials}-msprom-dce'
   location: parLocation
