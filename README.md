@@ -38,7 +38,7 @@ Success/Acceptance Criteria:
 - [x] Check cluster autoscaler logs for correct function of the cluster
 - [x] Confirm the Pod autoscaler is running
 - [x] Connect to a pod using kubectl bash command
-- [x] Display the value of the example secret in the pod bash shell: kubectl exec azure-vote-front-684fc7679f-t9kdt --namespace (namespace) -- cat ./secrets-store-(front/back)/(secretName)
+- [x] Display the value of the example secret in the pod bash shell: kubectl exec (podName) --namespace (namespace) -- cat ./secrets-store-(front/back)/(secretName)
 - [x] Check Container Insights is running, via the portal
 - [x] Check Prometheus Monitor Metrics in Grafana instance
 - [x] Use Azure Loading Testing to load the AKS cluster resulting in autoscaling of the nodes and pods: kubectl get pods --namespace (namespace)
