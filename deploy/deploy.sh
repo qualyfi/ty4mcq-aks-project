@@ -3,8 +3,8 @@ az login
 # Enter Details Below
 
 ################
-clientName="tylercm"
-clientInitials="tcm"
+clientName="tmcqueen"
+clientInitials="tm"
 location="uksouth"
 
 entraGroupName="AKS EID Admin Group"
@@ -77,7 +77,13 @@ kubectl create namespace $kubectlNamespace
 envsubst < deploy/yaml/manifest.yaml | kubectl apply -f - --namespace $kubectlNamespace
 
 kubectl apply -f deploy/yaml/container-azm-ms-agentconfig.yaml
+
 kubectl autoscale deployment azure-vote-front --namespace $kubectlNamespace --cpu-percent=50 --min=1 --max=10
 kubectl autoscale deployment azure-vote-back --namespace $kubectlNamespace --cpu-percent=50 --min=1 --max=10
 
 kubectl get pods --namespace $kubectlNamespace
+kubectl get hpa --namespace $kubectlNamespace
+
+# Testing
+# kubectl exec azure-vote-front-684fc7679f-t9kdt --namespace production -- cat ./secrets-store-front/ExampleSecret
+# kubectl exec azure-vote-back-8565bc6675-qxkzd --namespace production -- cat ./secrets-store-back/ExampleSecret
