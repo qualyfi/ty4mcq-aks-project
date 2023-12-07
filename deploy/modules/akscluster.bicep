@@ -16,6 +16,10 @@ param parApplicationPodSubnetId string
 resource resAksCluster 'Microsoft.ContainerService/managedClusters@2023-09-01' = {
   name: parAksClusterName
   location: parLocation
+  sku: {
+    name: 'Base'
+    tier: 'Free'
+  }
   identity: {
     type: 'SystemAssigned'
   }
@@ -31,10 +35,10 @@ resource resAksCluster 'Microsoft.ContainerService/managedClusters@2023-09-01' =
     agentPoolProfiles: [
       {
         name: 'system'
-        count: 2
-        vmSize: 'Standard_DS2_v2'
-        maxPods: 250
-        maxCount: 20
+        count: 1
+        vmSize: 'Standard_B2s'
+        maxPods: 10
+        maxCount: 1
         minCount: 1
         enableAutoScaling: true
         osType: 'Linux'
@@ -45,10 +49,10 @@ resource resAksCluster 'Microsoft.ContainerService/managedClusters@2023-09-01' =
       }
       {
         name: 'application'
-        count: 2
-        vmSize: 'Standard_DS2_v2'
-        maxPods: 250
-        maxCount: 20
+        count: 1
+        vmSize: 'Standard_B2s'
+        maxPods: 10
+        maxCount: 1
         minCount: 1
         enableAutoScaling: true
         osType: 'Linux'

@@ -29,8 +29,8 @@ resource resAppgw 'Microsoft.Network/applicationGateways@2023-05-01' = {
   location: parLocation
   properties: {
     sku: {
-      name: 'WAF_v2'
-      tier: 'WAF_v2'
+      name: 'Standard_v2'
+      tier: 'Standard_v2'
     }
     gatewayIPConfigurations: [
       {
@@ -108,9 +108,9 @@ resource resAppgw 'Microsoft.Network/applicationGateways@2023-05-01' = {
         }
       }
     ]
-    firewallPolicy: {
-      id: resAppgwWaf.id
-    }
+    // firewallPolicy: {
+    //   id: resAppgwWaf.id
+    // }
     autoscaleConfiguration: {
       minCapacity: 0
       maxCapacity: 10
@@ -124,27 +124,27 @@ resource resAppgw 'Microsoft.Network/applicationGateways@2023-05-01' = {
     }
   }
 }
-resource resAppgwWaf 'Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies@2023-05-01' = {
-  name: 'aks-${parInitials}-appgw-waf'
-  location: parLocation
-  properties: {
-    policySettings: {
-      requestBodyCheck: true
-      maxRequestBodySizeInKb: 128
-      fileUploadLimitInMb: 100
-      state: 'Enabled'
-      mode: 'Detection'
-    }
-    managedRules: {
-      managedRuleSets: [
-        {
-          ruleSetType: 'OWASP'
-          ruleSetVersion: '3.2'
-        }
-      ]
-    }
-  }
-}
+// resource resAppgwWaf 'Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies@2023-05-01' = {
+//   name: 'aks-${parInitials}-appgw-waf'
+//   location: parLocation
+//   properties: {
+//     policySettings: {
+//       requestBodyCheck: true
+//       maxRequestBodySizeInKb: 128
+//       fileUploadLimitInMb: 100
+//       state: 'Enabled'
+//       mode: 'Detection'
+//     }
+//     managedRules: {
+//       managedRuleSets: [
+//         {
+//           ruleSetType: 'OWASP'
+//           ruleSetVersion: '3.2'
+//         }
+//       ]
+//     }
+//   }
+// }
 
 //Outputs
 output outAppgwId string = resAppgw.id

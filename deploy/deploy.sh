@@ -3,18 +3,22 @@ az login
 # Enter Details Below
 
 ################
-clientName="tmcqueen"
-clientInitials="tm"
+clientName="tylerm"
+clientInitials="tcm"
 location="uksouth"
 
 entraGroupName="AKS EID Admin Group"
 kvSecretName="ExampleSecret"
 kvSecretValue="RaynersLane"
 
+subscription="e5cfa658-369f-4218-b58e-cece3814d3f1"
+
 aksClusterAdminUsername="ty4mcq"
 
 kubectlNamespace="production"
 ################
+
+az account set --subscription $subscription
 
 tenantId="$(az account show --query tenantId -o tsv)"
 entraGroupId="$(az ad group list --display-name "$entraGroupName" --query "[].{id:id}" --output tsv)"
@@ -33,12 +37,6 @@ sshPublicKeyFile="$sshKeyName.pub"
 keyVaultName="aks-$clientInitials-kv-$(shuf -i 0-9999999 -n 1)"
 
 secretProviderClassName="aks-$clientInitials-spc"
-
-git clone https://github.com/Azure-Samples/azure-voting-app-redis
-docker compose -f azure-voting-app-redis/docker-compose.yaml up -d
-docker images
-docker ps
-docker compose down
 
 az config set defaults.group=$rgName
 
@@ -71,9 +69,12 @@ export keyVaultId="$(az keyvault show --name $keyVaultName --resource-group $rgN
 az role assignment create --role "Key Vault Administrator" --assignee $clientId --scope "/$keyVaultId"
 az role assignment create --role "Key Vault Secrets User" --assignee $clientId --scope "/$keyVaultId"
 
-# ACR Build
-az acr build --registry $acrName -g $rgName --image mcr.microsoft.com/azuredocs/azure-vote-front:v1 ./azure-voting-app-redis/azure-vote
-az acr build --registry $acrName -g $rgName --image mcr.microsoft.com/oss/bitnami/redis:6.0.8 ./azure-voting-app-redis/azure-vote
+# ACR Import
+az acr import --name $acrName --source mcr.microsoft.com/azuredocs/azure-vote-front:v1 --image azure-vote-front:v1
+az acr import --name $acrName --source mcr.microsoft.com/oss/bitnami/redis:6.0.8 --image redis:6.0.8
+
+# Attach ACR to AKS Cluster
+az aks update -n $aksClusterName -g $rgName --attach-acr $acrName
 
 export yamlSecretProviderClassName=$secretProviderClassName
 export yamlClientId=$clientId
