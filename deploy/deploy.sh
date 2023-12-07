@@ -73,9 +73,6 @@ az role assignment create --role "Key Vault Secrets User" --assignee $clientId -
 az acr import --name $acrName --source mcr.microsoft.com/azuredocs/azure-vote-front:v1 --image azure-vote-front:v1
 az acr import --name $acrName --source mcr.microsoft.com/oss/bitnami/redis:6.0.8 --image redis:6.0.8
 
-# Attach ACR to AKS Cluster
-az aks update -n $aksClusterName -g $rgName --attach-acr $acrName
-
 export yamlSecretProviderClassName=$secretProviderClassName
 export yamlClientId=$clientId
 export yamlKeyVaultName=$keyVaultName
