@@ -37,8 +37,8 @@ resource resAksCluster 'Microsoft.ContainerService/managedClusters@2023-09-01' =
         name: 'system'
         count: 1
         vmSize: 'Standard_B2s'
-        maxPods: 10
-        maxCount: 1
+        maxPods: 30
+        maxCount: 10
         minCount: 1
         enableAutoScaling: true
         osType: 'Linux'
@@ -51,8 +51,8 @@ resource resAksCluster 'Microsoft.ContainerService/managedClusters@2023-09-01' =
         name: 'application'
         count: 1
         vmSize: 'Standard_B2s'
-        maxPods: 10
-        maxCount: 1
+        maxPods: 30
+        maxCount: 10
         minCount: 1
         enableAutoScaling: true
         osType: 'Linux'

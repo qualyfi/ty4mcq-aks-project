@@ -3,7 +3,7 @@ az login
 # Enter Details Below
 
 ################
-clientName="tylerm"
+clientName="tmcqueen"
 clientInitials="tcm"
 location="uksouth"
 
@@ -50,7 +50,7 @@ arrayKey=($readKey)
 sshPublicKey=${arrayKey[@]:0:2}
 
 # Deploy Bicep Files
-az deployment group create --resource-group $rgName --template-file ./deploy/main.bicep --parameters parLocation=$location parInitials=$clientInitials parTenantId=$tenantId parEntraGroupId=$entraGroupId parAcrName=$acrName parUserId=$userId parSshPublicKey="$sshPublicKey" parAksClusterName=$aksClusterName parAksClusterAdminUsername=$aksClusterAdminUsername
+az deployment group create --resource-group $rgName --template-file ./deploy/main.bicep --parameters parLocation=$location parInitials=$clientInitials parUserId=$userId parTenantId=$tenantId parEntraGroupId=$entraGroupId parAcrName=$acrName parSshPublicKey="$sshPublicKey" parAksClusterName=$aksClusterName parAksClusterAdminUsername=$aksClusterAdminUsername
 
 # Access AKS Cluster
 az aks get-credentials -n $aksClusterName -g $rgName
@@ -58,16 +58,21 @@ az aks get-credentials -n $aksClusterName -g $rgName
 # Enable CSI Driver
 az aks enable-addons --addons azure-keyvault-secrets-provider --name $aksClusterName --resource-group $rgName
 
-# Create Key Vault + Secret
+# Create Key Vault
 az keyvault create -n $keyVaultName -g $rgName -l $location --enable-rbac-authorization
-az keyvault secret set --vault-name $keyVaultName -n $kvSecretName --value $kvSecretValue
 
+# Assign Key Vault Roles to CSI Driver Managed Identity
 export clientId="$(az aks show -g $rgName -n $aksClusterName --query addonProfiles.azureKeyvaultSecretsProvider.identity.clientId -o tsv)"
 export keyVaultId="$(az keyvault show --name $keyVaultName --resource-group $rgName --query id -o tsv)"
 
-# Assign Key Vault Roles to CSI Driver Managed Identity
 az role assignment create --role "Key Vault Administrator" --assignee $clientId --scope "/$keyVaultId"
 az role assignment create --role "Key Vault Secrets User" --assignee $clientId --scope "/$keyVaultId"
+az role assignment create --role "Key Vault Administrator" --assignee $userId --scope "/$keyVaultId"
+az role assignment create --role "Key Vault Secrets User" --assignee $userId --scope "/$keyVaultId"
+
+
+# Set Secret
+az keyvault secret set --vault-name $keyVaultName -n $kvSecretName --value $kvSecretValue
 
 # ACR Import
 az acr import --name $acrName --source mcr.microsoft.com/azuredocs/azure-vote-front:v1 --image azure-vote-front:v1
@@ -82,7 +87,8 @@ export yamlKvSecretName=$kvSecretName
 # Create Namespace
 kubectl create namespace $kubectlNamespace
 
-# Substitute Variables + Apply Manifest File
+# Substitute Variables + Apply SPC/Manifest File
+envsubst < deploy/yaml/spc.yaml | kubectl apply -f - --namespace $kubectlNamespace
 envsubst < deploy/yaml/manifest.yaml | kubectl apply -f - --namespace $kubectlNamespace
 
 # Enable Container Insights

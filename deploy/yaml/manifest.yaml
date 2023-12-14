@@ -1,21 +1,3 @@
-apiVersion: secrets-store.csi.x-k8s.io/v1
-kind: SecretProviderClass
-metadata:
-  name: $yamlSecretProviderClassName
-spec:
-  provider: azure
-  parameters:
-    usePodIdentity: "false"
-    useVMManagedIdentity: "true"
-    userAssignedIdentityID: "$yamlClientId"
-    keyvaultName: "$yamlKeyVaultName"
-    objects: |
-      array:
-        - |
-          objectName: "$yamlKvSecretName"
-          objectType: secret
-    tenantId: "$yamlTenantId"
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
